@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Text Summarizer | FastAPI Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconify -->
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --accent: #ef233c;
+            --accent-hover: #be123c;
+            --bg-dark: #0a0a0c;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-card {
+            background: rgba(17, 17, 19, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .border-glow {
+            transition: border 0.3s ease, box-shadow 0.3s ease;
+        }
+        .border-glow:hover {
+            border-color: rgba(225, 29, 72, 0.4);
+            box-shadow: 0 0 20px rgba(225, 29, 72, 0.2);
+        }
+
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #aaaaaa 50%, #ef233c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Shake Animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-5px); }
+            40% { transform: translateX(5px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; border-color: #ef233c !important; }
+
+        /* Page Load Animation */
+        .fade-up-in {
+            animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Sparkle Animation */
+        .sparkle-slow {
+            animation: sparklePulse 3s infinite ease-in-out;
+        }
+        @keyframes sparklePulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px #ef233c); }
+            50% { transform: scale(1.2); filter: drop-shadow(0 0 12px #ef233c); }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+        .tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1e;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            animation: fadeInSimple 0.2s forwards;
+        }
+        @keyframes fadeInSimple { to { opacity: 1; } }
+
+        /* Global Background Particles */
+        .bg-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 10% 20%, rgba(239, 35, 60, 0.08) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(239, 35, 60, 0.03) 0%, transparent 40%);
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .hidden-fade { opacity: 0; transform: translateY(10px); transition: 0.5s ease; pointer-events: none; }
+        .show-fade { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+        /* Toast Container */
+        #toast-root {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .toast-item {
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-6 md:p-12 selection:bg-red-500/30">
+    <div class="bg-mesh"></div>
+    <div class="bg-grid"></div>
+
+    <div id="toast-root"></div>
+
+    <!-- Header Section -->
+    <header class="text-center mb-12 fade-up-in">
+        <div class="inline-flex items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 mb-6 sparkle-slow">
+            <iconify-icon icon="lucide:sparkles" class="text-3xl text-red-500"></iconify-icon>
+        </div>
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight gradient-text mb-3">AI Text Summarizer</h1>
+        <p class="text-zinc-500 text-sm font-medium tracking-wide uppercase">Fine-tuned T5 model &middot; Powered by <span class="text-red-500">FastAPI</span></p>
+    </header>
+
+    <!-- Main Card -->
+    <div class="w-full max-w-4xl glass-card rounded-[2.5rem] p-6 md:p-10 border-glow fade-up-in" style="animation-delay: 0.2s;">
+        <!-- Input Section -->
+        <div class="mb-8 relative" id="input-container">
+            <div class="flex items-center justify-between mb-4">
+                <label class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                    <iconify-icon icon="lucide:text-quote" class="text-red-500"></iconify-icon>
+                    Source Text
+                </label>
+                <div class="flex items-center gap-4">
+                    <button id="clear-btn" class="text-zinc-500 hover:text-white transition-colors text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                        <iconify-icon icon="lucide:rotate-ccw"></iconify-icon> Clear
+                    </button>
+                    <span id="word-count-badge" class="bg-white/5 px-3 py-1 rounded-full text-[10px] font-bold text-zinc-400 uppercase tracking-widest">0 Words</span>
+                </div>
+            </div>
+
+            <div class="relative group">
+                <textarea id="text-input" 
+                    class="w-full min-h-[300px] bg-black/40 border border-white/5 rounded-3xl p-6 text-zinc-100 placeholder-zinc-700 focus:outline-none focus:border-red-500/30 transition-all resize-y text-md leading-[1.8]"
+                    placeholder="Paste your conversation or article content here..."></textarea>
+                
+                <div class="absolute bottom-6 right-6 text-[10px] font-bold uppercase tracking-widest text-zinc-700 pointer-events-none" id="char-limit">
+                    0 / 5000 
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="tooltip" data-tip="Click to process and generate summary">
+            <button id="summarize-btn" class="w-full py-5 rounded-3xl bg-gradient-to-r from-red-600 to-red-700 hover:shadow-[0_0_30px_rgba(239,35,60,0.5)] hover:scale-[1.01] active:scale-95 transition-all text-white flex items-center justify-center gap-3">
+                <div id="btn-idle" class="flex items-center gap-3 font-extrabold uppercase tracking-widest text-xs">
+                    <iconify-icon icon="lucide:sparkles" class="text-xl"></iconify-icon>
+                    Summarize Now
+                </div>
+                <div id="btn-loading" class="hidden flex items-center gap-3 font-extrabold uppercase tracking-widest text-xs">
+                    <div class="spinner"></div>
+                    Summarizing Content...
+                </div>
+            </button>
+        </div>
+
+        <!-- Output Section -->
+        <div id="result-section" class="hidden-fade mt-12 pt-12 border-t border-white/5">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <iconify-icon icon="lucide:bot" class="text-3xl text-red-500"></iconify-icon>
+                    <h3 class="text-lg font-bold tracking-tight text-white uppercase text-sm">AI Intelligence Summary</h3>
+                </div>
+                <div id="reduction-stat" class="px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-[10px] font-bold uppercase tracking-widest text-red-400">
+                    Calculated Word Reduction
+                </div>
+            </div>
+
+            <div class="relative group">
+                <div id="summary-content" class="bg-white/5 border border-white/5 rounded-3xl p-8 text-zinc-200 leading-relaxed italic text-md font-medium group-hover:border-red-500/20 transition-all">
+                    <!-- Summary content will be injected here -->
+                </div>
+                <button id="copy-btn" class="absolute top-4 right-4 p-2.5 bg-black/60 border border-white/10 rounded-2xl hover:bg-red-500/20 text-zinc-400 hover:text-white transition-all outline-none">
+                    <iconify-icon icon="lucide:copy" id="copy-icon" class="text-lg"></iconify-icon>
+                    <iconify-icon icon="lucide:check" id="check-icon" class="hidden text-xl text-green-400"></iconify-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-12 fade-up-in" style="animation-delay: 0.4s;">
+        <p class="text-[10px] font-bold uppercase tracking-[0.4em] text-zinc-600 text-center">
+            Pydantic Validated &middot; FastAPI Driven &middot; T5-SAMSum Architecture
+        </p>
+    </footer>
+
+    <!-- Logic -->
+    <script>
+        const textInput = document.getElementById('text-input');
+        const countBadge = document.getElementById('word-count-badge');
+        const charLimit = document.getElementById('char-limit');
+        const clearBtn = document.getElementById('clear-btn');
+        const summarizeBtn = document.getElementById('summarize-btn');
+        const btnIdle = document.getElementById('btn-idle');
+        const btnLoading = document.getElementById('btn-loading');
+        const resultSection = document.getElementById('result-section');
+        const summaryContent = document.getElementById('summary-content');
+        const reductionStat = document.getElementById('reduction-stat');
+        const copyBtn = document.getElementById('copy-btn');
+        const toastRoot = document.getElementById('toast-root');
+
+        const getWords = (str) => str.trim().split(/\s+/).filter(w => w).length;
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast-item flex items-center gap-3 px-6 py-4 rounded-2xl border backdrop-blur-md shadow-2xl min-w-[300px] ${
+                type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+            }`;
+            const icon = type === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle';
+            toast.innerHTML = `<iconify-icon icon="${icon}" class="text-lg"></iconify-icon> <span class="text-xs font-bold uppercase tracking-widest">${message}</span>`;
+            toastRoot.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                toast.style.transition = '0.4s ease';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        // Live Counters
+        textInput.addEventListener('input', () => {
+            const val = textInput.value;
+            countBadge.innerText = `${getWords(val)} Words`;
+            charLimit.innerText = `${val.length} / 5000`;
+        });
+
+        clearBtn.addEventListener('click', () => {
+            textInput.value = '';
+            countBadge.innerText = '0 Words';
+            charLimit.innerText = '0 / 5000';
+            resultSection.classList.remove('show-fade');
+            textInput.focus();
+        });
+
+        // Backend Integration
+        summarizeBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+
+            // Client-side Validation (String & Length)
+            if (!text || typeof text !== 'string') {
+                textInput.classList.add('animate-shake');
+                showToast('Content Must Be A Text String', 'error');
+                setTimeout(() => textInput.classList.remove('animate-shake'), 400);
+                return;
+            }
+
+            if (text.length < 20) {
+                textInput.classList.add('animate-shake');
+                showToast('Content Too Short (Min 20 Characters)', 'error');
+                setTimeout(() => textInput.classList.remove('animate-shake'), 400);
+                return;
+            }
+
+            // UI Interaction State
+            summarizeBtn.disabled = true;
+            btnIdle.classList.add('hidden');
+            btnLoading.classList.remove('hidden');
+            resultSection.classList.remove('show-fade');
+
+            try {
+                // Connecting to FastAPI /summarize endpoint
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text }) // Pydantic matching key
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Success logic
+                    summaryContent.innerText = data.summary;
+                    reductionStat.innerText = `Reduced from ${data.original_word_count} words → ${data.summary_word_count} words`;
+                    
+                    resultSection.classList.add('show-fade');
+                    showToast('Intelligence Summarized Successfully');
+                } else {
+                    // Server-side validation (422) or other error handling
+                    const errorMsg = data.detail ? (Array.isArray(data.detail) ? data.detail[0].msg : data.detail) : 'System Error';
+                    showToast(errorMsg.toUpperCase(), 'error');
+                }
+            } catch (err) {
+                showToast('Server Connection Refused', 'error');
+                console.error(err);
+            } finally {
+                summarizeBtn.disabled = false;
+                btnIdle.classList.remove('hidden');
+                btnLoading.classList.add('hidden');
+            }
+        });
+
+        // Clipboard Copy
+        copyBtn.addEventListener('click', () => {
+            const copyIcon = document.getElementById('copy-icon');
+            const checkIcon = document.getElementById('check-icon');
+            
+            navigator.clipboard.writeText(summaryContent.innerText).then(() => {
+                copyIcon.classList.add('hidden');
+                checkIcon.classList.remove('hidden');
+                showToast('Copied To Clipboard');
+                setTimeout(() => {
+                    copyIcon.classList.remove('hidden');
+                    checkIcon.classList.add('hidden');
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
