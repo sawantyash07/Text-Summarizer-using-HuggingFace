@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+transformers
+torch
+jinja2
+aiofiles
+python-multipart
+sentencepiece
+safetensors
+pydantic
