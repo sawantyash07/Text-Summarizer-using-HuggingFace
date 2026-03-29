@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, constr
 import uvicorn
+import socket
 
 # 🚀 Environment Setup for Performance & Stability
 os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
@@ -19,23 +20,26 @@ summarizer_pipe = {}
 # ⚡ Lifespan Manager: Loads the model (LAZY LOADING FOR FAST STARTUP)
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 Server started! Initializing AI Model in background...")
+    print("\n" + "="*50)
+    print("🚀 API SERVER IS NOW AWAKE!")
+    print("🏠 Access UI at: http://127.0.0.1:8000")
+    print("="*50 + "\n")
+    print("🔄 Initializing AI Intelligence in background...")
+    
     try:
-        # Move heavy import inside to make server startup nearly instant
         from transformers import pipeline
-        
-        # Using a proven high-quality T5 SAMSum model
-        # For local use it looks in the current dir, for Render it downloads from HF
-        model_path = "knkarthick/SAMSum-T5" 
+        # Remote model path for better compatibility
+        model_name = "knkarthick/SAMSum-T5" 
         
         summarizer_pipe["instance"] = pipeline(
             "summarization", 
-            model=model_path, 
-            device=-1 # Ensure CPU usage
+            model=model_name, 
+            device=-1 # CPU
         )
-        print(f"✅ AI Model [{model_path}] loaded successfully!")
+        print(f"✅ AI Brain [{model_name}] connected successfully!")
     except Exception as e:
-        print(f"❌ Error during model loading: {e}")
+        print(f"❌ Error during AI initialization: {e}")
+        
     yield
     summarizer_pipe.clear()
 
@@ -57,7 +61,10 @@ async def summarize_text(payload: SummarizationRequest):
     text_content = payload.text
     
     if "instance" not in summarizer_pipe:
-        raise HTTPException(status_code=503, detail="The AI model is still initializing. Please wait about 30 seconds and try again.")
+        raise HTTPException(
+            status_code=503, 
+            detail="The AI engine is warming up. Please wait 30 seconds and try again."
+        )
 
     try:
         result = summarizer_pipe["instance"](
@@ -76,15 +83,15 @@ async def summarize_text(payload: SummarizationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference Error: {str(e)}")
 
-# ▶️ RUN CONFIGURATION (OPTIMIZED FOR BOTH LOCAL & RENDER)
+# ▶️ RUN CONFIGURATION
 if __name__ == "__main__":
-    # Check if we are running on Render (Render sets the PORT environment variable)
-    RENDER_PORT = os.environ.get("PORT")
+    # Check for Render environment
+    PORT = os.environ.get("PORT")
     
-    if RENDER_PORT:
-        # DEPLOYMENT SETTINGS
-        uvicorn.run(app, host="0.0.0.0", port=int(RENDER_PORT))
+    if PORT:
+        # DEPLOYMENT MODE
+        uvicorn.run(app, host="0.0.0.0", port=int(PORT))
     else:
-        # LOCAL SETTINGS (Fixed for Chrome error 10048 and 0.0.0.0 issues)
-        print("🏠 Running locally on http://127.0.0.1:8080")
-        uvicorn.run(app, host="127.0.0.1", port=8080)
+        # LOCAL MODE
+        # Using Port 8000 and 127.0.0.1 to avoid Chrome security errors
+        uvicorn.run(app, host="127.0.0.1", port=8000)

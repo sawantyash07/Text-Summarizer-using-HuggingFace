@@ -35,14 +35,16 @@ pip install -r requirements.txt
 ```
 
 ### 3. **Run the Application**
-Launch the FastAPI server (using the optimized `app.py` on port 8080):
+Launch the FastAPI server (using the optimized `app.py`):
 ```bash
 python app.py
 ```
 
 ### 4. **Access the App**
 Open your favorite browser and navigate to:
-**[http://127.0.0.1:8080](http://127.0.0.1:8080)**
+**[http://127.0.0.1:8000](http://127.0.0.1:8000)**
+
+> **⚠️ NOTE:** If you get an "Address Already in Use" error, please close any existing terminal windows running `python app.py` or restart your terminal.
 
 ---
 
