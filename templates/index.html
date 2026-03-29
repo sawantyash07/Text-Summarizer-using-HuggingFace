@@ -57,7 +57,8 @@
             background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
                               linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
             background-size: 50px 50px;
-            [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_90%)];
+            mask-image: radial-gradient(circle, black, transparent);
+            -webkit-mask-image: radial-gradient(circle, black, transparent);
             opacity: 0.5;
             pointer-events: none;
         }
@@ -97,7 +98,9 @@
         /* Custom UI Elements */
         .gradient-text {
             background: linear-gradient(135deg, #fff 0%, #aaa 50%, rgba(225, 29, 72, 0.8) 100%);
+            background: linear-gradient(135deg, #fff 0%, #aaa 50%, rgba(225, 29, 72, 0.8) 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 

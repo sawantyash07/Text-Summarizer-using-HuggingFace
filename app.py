@@ -94,4 +94,4 @@ if __name__ == "__main__":
     else:
         # LOCAL MODE
         # Using Port 8000 and 127.0.0.1 to avoid Chrome security errors
-        uvicorn.run(app, host="127.0.0.1", port=8000)
+        uvicorn.run(app, host="127.0.0.1", port=8080)
